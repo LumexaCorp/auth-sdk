@@ -55,17 +55,22 @@ class AuthClient
     /**
      * Register a new user
      *
-     * @param array<string, mixed> $userData
+     * @param array{
+     *     email: string,
+     *     password: string,
+     *     first_name: string,
+     *     last_name: string,
+     *     phone: string
+     * } $data
      * @throws AuthException
      */
-    public function register(array $userData): UserDTO
+    public function register(array $data): array
     {
         try {
             $response = $this->httpClient->post('/api/auth/register', [
-                'json' => $userData,
+                'json' => $data,
             ]);
-            $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
+            return json_decode((string) $response->getBody(), true);
         } catch (\Exception $e) {
             throw new AuthException("Failed to register user: {$e->getMessage()}", $e->getCode(), $e);
         }
@@ -221,7 +226,12 @@ class AuthClient
     /**
      * Create a new role
      *
-     * @param array<string, mixed> $data
+     * @param array{
+     *     name: string,
+     *     display_name: string,
+     *     description: string,
+     *     permissions: array<string>
+     * } $data
      * @throws AuthException
      */
     public function createRole(array $data): RoleDTO
@@ -240,7 +250,12 @@ class AuthClient
     /**
      * Update a role
      *
-     * @param array<string, mixed> $data
+     * @param array{
+     *     name?: string,
+     *     display_name?: string,
+     *     description?: string,
+     *     permissions?: array<string>
+     * } $data
      * @throws AuthException
      */
     public function updateRole(int $roleId, array $data): RoleDTO
@@ -375,6 +390,115 @@ class AuthClient
             $this->httpClient->post('/api/auth/logout');
         } catch (\Exception $e) {
             throw new AuthException("Failed to logout: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Get all users
+     *
+     * @return array<UserDTO>
+     * @throws AuthException
+     */
+    public function getAllUsers(): array
+    {
+        try {
+            $response = $this->httpClient->get('/api/users');
+            $data = json_decode((string) $response->getBody(), true);
+            return array_map(fn (array $user) => UserDTO::fromArray($user), $data['data']);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to get users: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Get a user by ID
+     *
+     * @throws AuthException
+     */
+    public function getUserById(string $id): UserDTO
+    {
+        try {
+            $response = $this->httpClient->get("/api/users/{$id}");
+            $data = json_decode((string) $response->getBody(), true);
+            return UserDTO::fromArray($data);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to get user: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Create a new user
+     *
+     * @param array{
+     *     email: string,
+     *     password: string,
+     *     first_name: string,
+     *     last_name: string,
+     *     phone: string
+     * } $data
+     * @throws AuthException
+     */
+    public function createUser(array $data): UserDTO
+    {
+        try {
+            $response = $this->httpClient->post('/api/users', [
+                'json' => $data,
+            ]);
+            $data = json_decode((string) $response->getBody(), true);
+            return UserDTO::fromArray($data);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to create user: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Get all roles
+     *
+     * @return array<RoleDTO>
+     * @throws AuthException
+     */
+    public function getAllRoles(): array
+    {
+        try {
+            $response = $this->httpClient->get('/api/roles');
+            $data = json_decode((string) $response->getBody(), true);
+            return array_map(fn (array $role) => RoleDTO::fromArray($role), $data['data']);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to get roles: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Assign a role to a user
+     *
+     * @throws AuthException
+     */
+    public function assignRole(string $userId, string $roleId): UserDTO
+    {
+        try {
+            $response = $this->httpClient->post("/api/users/{$userId}/roles", [
+                'json' => ['role_id' => $roleId],
+            ]);
+            $data = json_decode((string) $response->getBody(), true);
+            return UserDTO::fromArray($data);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to assign role: {$e->getMessage()}", $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Remove a role from a user
+     *
+     * @throws AuthException
+     */
+    public function removeRole(string $userId, string $roleId): array
+    {
+        try {
+            $response = $this->httpClient->delete("/api/users/{$userId}/roles/{$roleId}");
+            $data = json_decode((string) $response->getBody(), true);
+            return array_map(fn (array $role) => RoleDTO::fromArray($role), $data);
+        } catch (\Exception $e) {
+            throw new AuthException("Failed to remove role: {$e->getMessage()}", $e->getCode(), $e);
         }
     }
 }

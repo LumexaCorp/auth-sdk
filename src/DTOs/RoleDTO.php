@@ -4,40 +4,42 @@ declare(strict_types=1);
 
 namespace Lumexa\AuthSdk\DTOs;
 
-readonly class RoleDTO
+class RoleDTO
 {
-    /**
-     * @param array<string> $permissions
-     */
     public function __construct(
-        public int $id,
-        public string $name,
-        public string $displayName,
-        public string $description,
-        public array $permissions = [],
-        public bool $isSystem = false,
-        public ?\DateTimeImmutable $createdAt = null,
-        public ?\DateTimeImmutable $updatedAt = null,
-    ) {}
+        public readonly string $id,
+        public readonly string $name,
+        public readonly string $display_name,
+        public readonly string $description,
+        public readonly array $permissions,
+        public readonly bool $is_system,
+        public readonly string $created_at,
+        public readonly string $updated_at,
+    ) {
+    }
 
     /**
+     * Create a DTO from an array
+     *
      * @param array<string, mixed> $data
      */
     public static function fromArray(array $data): self
     {
         return new self(
-            id: $data['id'],
-            name: $data['name'],
-            displayName: $data['display_name'],
-            description: $data['description'],
-            permissions: $data['permissions'] ?? [],
-            isSystem: $data['is_system'] ?? false,
-            createdAt: isset($data['created_at']) ? new \DateTimeImmutable($data['created_at']) : null,
-            updatedAt: isset($data['updated_at']) ? new \DateTimeImmutable($data['updated_at']) : null,
+            id: (string) $data['id'],
+            name: (string) $data['name'],
+            display_name: (string) $data['display_name'],
+            description: (string) $data['description'],
+            permissions: (array) $data['permissions'],
+            is_system: (bool) $data['is_system'],
+            created_at: (string) $data['created_at'],
+            updated_at: (string) $data['updated_at'],
         );
     }
 
     /**
+     * Convert the DTO to an array
+     *
      * @return array<string, mixed>
      */
     public function toArray(): array
@@ -45,12 +47,12 @@ readonly class RoleDTO
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'display_name' => $this->displayName,
+            'display_name' => $this->display_name,
             'description' => $this->description,
             'permissions' => $this->permissions,
-            'is_system' => $this->isSystem,
-            'created_at' => $this->createdAt?->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updatedAt?->format('Y-m-d H:i:s'),
+            'is_system' => $this->is_system,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 
