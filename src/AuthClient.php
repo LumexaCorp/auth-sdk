@@ -16,15 +16,13 @@ class AuthClient
 
     public function __construct(
         private readonly string $baseUrl,
-        private readonly string $apiKey,
         private readonly string $storeToken,
         ?Client $httpClient = null
     ) {
         $this->httpClient = $httpClient ?? new Client([
             'base_uri' => $this->baseUrl,
             'headers' => [
-                'Authorization' => "Bearer {$this->apiKey}",
-                'X-Store-Domain' => $this->storeToken,
+                'X-Store-Token' => $this->storeToken,
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
             ],
@@ -282,36 +280,6 @@ class AuthClient
             $this->httpClient->delete("/api/auth/roles/{$roleId}");
         } catch (\Exception $e) {
             throw new AuthException("Failed to delete role: {$e->getMessage()}", $e->getCode(), $e);
-        }
-    }
-
-    /**
-     * Assign role to user
-     *
-     * @throws AuthException
-     */
-    public function assignRole(int $userId, int $roleId): void
-    {
-        try {
-            $this->httpClient->post("/api/auth/users/{$userId}/roles", [
-                'json' => ['role_id' => $roleId],
-            ]);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to assign role: {$e->getMessage()}", $e->getCode(), $e);
-        }
-    }
-
-    /**
-     * Remove role from user
-     *
-     * @throws AuthException
-     */
-    public function removeRole(int $userId, int $roleId): void
-    {
-        try {
-            $this->httpClient->delete("/api/auth/users/{$userId}/roles/{$roleId}");
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to remove role: {$e->getMessage()}", $e->getCode(), $e);
         }
     }
 

@@ -4,47 +4,61 @@ declare(strict_types=1);
 
 namespace Lumexa\AuthSdk\DTOs;
 
-readonly class TokenDTO
+class TokenDTO
 {
     public function __construct(
-        public string $accessToken,
-        public string $refreshToken,
-        public string $tokenType,
-        public int $expiresIn,
-        public ?\DateTimeImmutable $createdAt = null,
-    ) {}
+        public readonly string $access_token,
+        public readonly string $token_type,
+        public readonly ?string $refresh_token,
+        public readonly ?int $expires_in,
+        public readonly UserDTO $user,
+    ) {
+    }
 
     /**
-     * @param array<string, mixed> $data
+     * Create a DTO from an array
+     *
+     * @param array{
+     *     access_token: string,
+     *     token_type: string,
+     *     refresh_token?: string|null,
+     *     expires_in?: int|null,
+     *     user: array<string, mixed>
+     * } $data
      */
     public static function fromArray(array $data): self
     {
         return new self(
-            accessToken: $data['access_token'],
-            refreshToken: $data['refresh_token'],
-            tokenType: $data['token_type'],
-            expiresIn: $data['expires_in'],
-            createdAt: isset($data['created_at']) ? new \DateTimeImmutable($data['created_at']) : null,
+            access_token: $data['access_token'],
+            token_type: $data['token_type'],
+            refresh_token: $data['refresh_token'] ?? null,
+            expires_in: $data['expires_in'] ?? null,
+            user: UserDTO::fromArray($data['user']),
         );
     }
 
     /**
+     * Convert the DTO to an array
+     *
      * @return array<string, mixed>
      */
     public function toArray(): array
     {
         return [
-            'access_token' => $this->accessToken,
-            'refresh_token' => $this->refreshToken,
-            'token_type' => $this->tokenType,
-            'expires_in' => $this->expiresIn,
-            'created_at' => $this->createdAt?->format('Y-m-d H:i:s'),
+            'access_token' => $this->access_token,
+            'token_type' => $this->token_type,
+            'refresh_token' => $this->refresh_token,
+            'expires_in' => $this->expires_in,
+            'user' => $this->user->toArray(),
         ];
     }
 
+    /**
+     * Get the full authorization header value
+     */
     public function getAuthorizationHeader(): string
     {
-        return "{$this->tokenType} {$this->accessToken}";
+        return "{$this->token_type} {$this->access_token}";
     }
 
     public function isExpired(): bool

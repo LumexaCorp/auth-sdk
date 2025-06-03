@@ -1,6 +1,6 @@
-# Auth SDK Lumexa
+# Lumexa Auth SDK
 
-Ce SDK fournit une interface pour interagir avec le service d'authentification de Lumexa.
+Ce SDK permet d'interagir facilement avec le service d'authentification de Lumexa.
 
 ## Installation
 
@@ -10,155 +10,197 @@ composer require lumexa/auth-sdk
 
 ## Configuration
 
-Pour utiliser le SDK, vous devez d'abord initialiser le client avec vos informations d'authentification :
+Pour utiliser le SDK, vous devez créer une instance du client avec votre token de store :
 
 ```php
 use Lumexa\AuthSdk\AuthClient;
 
-$authClient = new AuthClient(
+$client = new AuthClient(
     baseUrl: 'https://api.lumexa.com',
-    apiKey: 'votre-api-key',
-    storeToken: 'votre-store-token'
+    storeToken: 'votre-store-token' // Token unique de votre store
 );
 ```
 
-## Fonctionnalités disponibles
+## Authentification
 
-### Authentification
+### Inscription d'un utilisateur
 
-#### Login
 ```php
-$tokenDTO = $authClient->login('email@example.com', 'mot-de-passe');
-// Retourne un TokenDTO contenant access_token et refresh_token
+$result = $client->register([
+    'email' => 'utilisateur@example.com',
+    'password' => 'motdepasse123',
+    'first_name' => 'Jean',
+    'last_name' => 'Dupont',
+    'phone' => '+33123456789'
+]);
 ```
 
-#### Inscription
+### Connexion
+
 ```php
-$userData = [
-    'email' => 'email@example.com',
-    'password' => 'mot-de-passe',
-    'name' => 'John Doe'
-];
-$userDTO = $authClient->register($userData);
+$token = $client->login('utilisateur@example.com', 'motdepasse123');
 ```
 
-#### Rafraîchissement du token
+### Déconnexion
+
 ```php
-$newTokenDTO = $authClient->refreshToken('votre-refresh-token');
+$client->logout();
 ```
 
-#### Déconnexion
-```php
-$authClient->logout();
-```
+### Récupération de l'utilisateur courant
 
-### Gestion du profil utilisateur
-
-#### Obtenir l'utilisateur courant
 ```php
-$userDTO = $authClient->getCurrentUser();
-```
-
-#### Mettre à jour le profil
-```php
-$data = [
-    'name' => 'Nouveau Nom',
-    'phone' => '0123456789'
-];
-$updatedUser = $authClient->updateProfile($data);
+$user = $client->getCurrentUser();
 ```
 
 ### Gestion du mot de passe
 
-#### Changer le mot de passe
 ```php
-$authClient->changePassword('ancien-mot-de-passe', 'nouveau-mot-de-passe');
-```
+// Changement de mot de passe
+$client->changePassword('ancien_mot_de_passe', 'nouveau_mot_de_passe');
 
-#### Demander une réinitialisation de mot de passe
-```php
-$authClient->requestPasswordReset('email@example.com');
-```
+// Demande de réinitialisation
+$client->requestPasswordReset('utilisateur@example.com');
 
-#### Réinitialiser le mot de passe
-```php
-$authClient->resetPassword('token-de-reset', 'nouveau-mot-de-passe');
-```
-
-### Gestion des rôles
-
-#### Obtenir tous les rôles
-```php
-$roles = $authClient->getRoles(page: 1, perPage: 20);
-```
-
-#### Obtenir un rôle spécifique
-```php
-$role = $authClient->getRole(roleId: 1);
-```
-
-#### Créer un nouveau rôle
-```php
-$roleData = [
-    'name' => 'admin',
-    'description' => 'Administrateur'
-];
-$newRole = $authClient->createRole($roleData);
-```
-
-#### Mettre à jour un rôle
-```php
-$roleData = [
-    'description' => 'Nouvelle description'
-];
-$updatedRole = $authClient->updateRole(roleId: 1, $roleData);
-```
-
-#### Supprimer un rôle
-```php
-$authClient->deleteRole(roleId: 1);
-```
-
-### Gestion des rôles utilisateur
-
-#### Assigner un rôle à un utilisateur
-```php
-$authClient->assignRole(userId: 1, roleId: 2);
-```
-
-#### Retirer un rôle d'un utilisateur
-```php
-$authClient->removeRole(userId: 1, roleId: 2);
-```
-
-#### Obtenir les rôles d'un utilisateur
-```php
-$userRoles = $authClient->getUserRoles(userId: 1);
+// Réinitialisation avec token
+$client->resetPassword('token_recu_par_email', 'nouveau_mot_de_passe');
 ```
 
 ### Vérification d'email
 
-#### Vérifier l'email
 ```php
-$authClient->verifyEmail('token-de-verification');
+// Vérifier l'email avec un token
+$client->verifyEmail('token_de_verification');
+
+// Renvoyer l'email de vérification
+$client->resendVerification();
 ```
 
-#### Renvoyer l'email de vérification
+## Gestion des utilisateurs
+
+### Liste des utilisateurs
+
 ```php
-$authClient->resendVerification();
+$users = $client->getAllUsers();
+```
+
+### Récupérer un utilisateur
+
+```php
+$user = $client->getUserById('user_id');
+```
+
+### Créer un utilisateur
+
+```php
+$user = $client->createUser([
+    'email' => 'utilisateur@example.com',
+    'password' => 'motdepasse123',
+    'first_name' => 'Jean',
+    'last_name' => 'Dupont',
+    'phone' => '+33123456789'
+]);
+```
+
+## Gestion des rôles
+
+### Liste des rôles
+
+```php
+// Tous les rôles
+$roles = $client->getAllRoles();
+
+// Avec pagination
+$roles = $client->getRoles(page: 1, perPage: 20);
+```
+
+### Opérations sur les rôles
+
+```php
+// Créer un rôle
+$role = $client->createRole([
+    'name' => 'admin',
+    'display_name' => 'Administrateur',
+    'description' => 'Accès complet au système',
+    'permissions' => ['users.manage', 'roles.manage']
+]);
+
+// Mettre à jour un rôle
+$role = $client->updateRole($roleId, [
+    'display_name' => 'Super Administrateur',
+    'permissions' => ['users.manage', 'roles.manage', 'system.manage']
+]);
+
+// Supprimer un rôle
+$client->deleteRole($roleId);
+```
+
+### Attribution des rôles
+
+```php
+// Assigner un rôle à un utilisateur
+$client->assignRole($userId, $roleId);
+
+// Retirer un rôle d'un utilisateur
+$client->removeRole($userId, $roleId);
+
+// Récupérer les rôles d'un utilisateur
+$roles = $client->getUserRoles($userId);
+```
+
+## Gestion des permissions
+
+```php
+// Liste toutes les permissions disponibles
+$permissions = $client->getPermissions();
 ```
 
 ## Gestion des erreurs
 
-Toutes les méthodes peuvent lever une `AuthException` en cas d'erreur. Il est recommandé de gérer ces exceptions dans votre code :
+Le SDK utilise des exceptions typées pour la gestion des erreurs. Toutes les erreurs liées à l'authentification lèvent une `AuthException` :
 
 ```php
 use Lumexa\AuthSdk\Exceptions\AuthException;
 
 try {
-    $user = $authClient->getCurrentUser();
+    $user = $client->getCurrentUser();
 } catch (AuthException $e) {
     // Gérer l'erreur
     echo $e->getMessage();
 }
 ```
+
+## DTOs disponibles
+
+Le SDK utilise des DTOs (Data Transfer Objects) pour représenter les données :
+
+### UserDTO
+
+```php
+$user->id;          // string
+$user->first_name;  // string
+$user->last_name;   // string
+$user->email;       // string
+$user->phone;       // string
+$user->roles;       // array<RoleDTO>
+```
+
+### RoleDTO
+
+```php
+$role->id;           // string
+$role->name;         // string
+$role->display_name; // string
+$role->description;  // string
+$role->permissions;  // array<string>
+$role->is_system;    // bool
+$role->created_at;   // string
+$role->updated_at;   // string
+
+// Vérifier si un rôle a une permission spécifique
+$role->hasPermission('users.manage'); // bool
+```
+
+## Support
+
+Pour toute question ou problème, veuillez ouvrir une issue sur le dépôt GitHub du projet.
