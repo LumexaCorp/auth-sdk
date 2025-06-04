@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Lumexa\AuthSdk;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use Lumexa\AuthSdk\Exceptions\AuthException;
 use Lumexa\AuthSdk\DTOs\UserDTO;
 use Lumexa\AuthSdk\DTOs\TokenDTO;
 use Lumexa\AuthSdk\DTOs\RoleDTO;
+use Lumexa\AuthSdk\Exceptions\ValidationException;
 
 class AuthClient
 {
@@ -30,6 +32,35 @@ class AuthClient
     }
 
     /**
+     * Handle API errors and transform them into appropriate exceptions
+     *
+     * @throws ValidationException|AuthException
+     */
+    private function handleApiError(\Throwable $e): never
+    {
+        if ($e instanceof ClientException) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $body = json_decode((string) $response->getBody(), true);
+
+            if ($statusCode === 422 && isset($body['errors'])) {
+                throw new ValidationException(
+                    $body['message'] ?? 'Validation failed',
+                    $body['errors'],
+                    $statusCode,
+                    $e
+                );
+            }
+
+            if (isset($body['message'])) {
+                throw new AuthException($body['message'], $statusCode, $e);
+            }
+        }
+
+        throw new AuthException($e->getMessage(), (int) $e->getCode(), $e);
+    }
+
+    /**
      * Login with email and password
      *
      * @throws AuthException
@@ -44,9 +75,9 @@ class AuthClient
                 ],
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return TokenDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to login: {$e->getMessage()}", $e->getCode(), $e);
+            return TokenDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -68,9 +99,10 @@ class AuthClient
             $response = $this->httpClient->post('/api/auth/register', [
                 'json' => $data,
             ]);
-            return json_decode((string) $response->getBody(), true);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to register user: {$e->getMessage()}", $e->getCode(), $e);
+            $data = json_decode((string) $response->getBody(), true);
+            return $data['data'];
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -88,9 +120,9 @@ class AuthClient
                 ],
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return TokenDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to refresh token: {$e->getMessage()}", $e->getCode(), $e);
+            return TokenDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -104,9 +136,9 @@ class AuthClient
         try {
             $response = $this->httpClient->get('/api/auth/me');
             $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get current user: {$e->getMessage()}", $e->getCode(), $e);
+            return UserDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -123,9 +155,9 @@ class AuthClient
                 'json' => $data,
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to update profile: {$e->getMessage()}", $e->getCode(), $e);
+            return UserDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -143,8 +175,8 @@ class AuthClient
                     'new_password' => $newPassword,
                 ],
             ]);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to change password: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -159,8 +191,8 @@ class AuthClient
             $this->httpClient->post('/api/auth/password/reset', [
                 'json' => ['email' => $email],
             ]);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to request password reset: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -178,8 +210,8 @@ class AuthClient
                     'password' => $newPassword,
                 ],
             ]);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to reset password: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -200,8 +232,8 @@ class AuthClient
             ]);
             $data = json_decode((string) $response->getBody(), true);
             return array_map(fn (array $item) => RoleDTO::fromArray($item), $data['data']);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get roles: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -215,9 +247,9 @@ class AuthClient
         try {
             $response = $this->httpClient->get("/api/auth/roles/{$roleId}");
             $data = json_decode((string) $response->getBody(), true);
-            return RoleDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get role: {$e->getMessage()}", $e->getCode(), $e);
+            return RoleDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -239,9 +271,9 @@ class AuthClient
                 'json' => $data,
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return RoleDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to create role: {$e->getMessage()}", $e->getCode(), $e);
+            return RoleDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -263,9 +295,9 @@ class AuthClient
                 'json' => $data,
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return RoleDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to update role: {$e->getMessage()}", $e->getCode(), $e);
+            return RoleDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -278,8 +310,8 @@ class AuthClient
     {
         try {
             $this->httpClient->delete("/api/auth/roles/{$roleId}");
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to delete role: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -294,9 +326,9 @@ class AuthClient
         try {
             $response = $this->httpClient->get('/api/auth/permissions');
             $data = json_decode((string) $response->getBody(), true);
-            return $data['permissions'];
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get permissions: {$e->getMessage()}", $e->getCode(), $e);
+            return $data['data']['permissions'];
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -311,9 +343,9 @@ class AuthClient
         try {
             $response = $this->httpClient->get("/api/auth/users/{$userId}/roles");
             $data = json_decode((string) $response->getBody(), true);
-            return array_map(fn (array $item) => RoleDTO::fromArray($item), $data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get user roles: {$e->getMessage()}", $e->getCode(), $e);
+            return array_map(fn (array $item) => RoleDTO::fromArray($item), $data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -328,8 +360,8 @@ class AuthClient
             $this->httpClient->post('/api/auth/email/verify', [
                 'json' => ['token' => $token],
             ]);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to verify email: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -342,8 +374,8 @@ class AuthClient
     {
         try {
             $this->httpClient->post('/api/auth/email/verification');
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to resend verification email: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -356,8 +388,8 @@ class AuthClient
     {
         try {
             $this->httpClient->post('/api/auth/logout');
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to logout: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -373,8 +405,8 @@ class AuthClient
             $response = $this->httpClient->get('/api/users');
             $data = json_decode((string) $response->getBody(), true);
             return array_map(fn (array $user) => UserDTO::fromArray($user), $data['data']);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get users: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -388,9 +420,9 @@ class AuthClient
         try {
             $response = $this->httpClient->get("/api/users/{$id}");
             $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get user: {$e->getMessage()}", $e->getCode(), $e);
+            return UserDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -413,9 +445,9 @@ class AuthClient
                 'json' => $data,
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to create user: {$e->getMessage()}", $e->getCode(), $e);
+            return UserDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -431,8 +463,8 @@ class AuthClient
             $response = $this->httpClient->get('/api/roles');
             $data = json_decode((string) $response->getBody(), true);
             return array_map(fn (array $role) => RoleDTO::fromArray($role), $data['data']);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to get roles: {$e->getMessage()}", $e->getCode(), $e);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -448,9 +480,9 @@ class AuthClient
                 'json' => ['role_id' => $roleId],
             ]);
             $data = json_decode((string) $response->getBody(), true);
-            return UserDTO::fromArray($data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to assign role: {$e->getMessage()}", $e->getCode(), $e);
+            return UserDTO::fromArray($data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 
@@ -464,9 +496,9 @@ class AuthClient
         try {
             $response = $this->httpClient->delete("/api/users/{$userId}/roles/{$roleId}");
             $data = json_decode((string) $response->getBody(), true);
-            return array_map(fn (array $role) => RoleDTO::fromArray($role), $data);
-        } catch (\Exception $e) {
-            throw new AuthException("Failed to remove role: {$e->getMessage()}", $e->getCode(), $e);
+            return array_map(fn (array $role) => RoleDTO::fromArray($role), $data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
         }
     }
 }
