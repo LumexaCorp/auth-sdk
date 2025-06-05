@@ -131,10 +131,14 @@ class AuthClient
      *
      * @throws AuthException
      */
-    public function getCurrentUser(): UserDTO
+    public function getCurrentUser(string $token): UserDTO
     {
         try {
-            $response = $this->httpClient->get('/api/auth/me');
+            $response = $this->httpClient->get('/api/auth/me', [
+                'headers' => [
+                    'Authorization' => "Bearer {$token}",
+                ],
+            ]);
             $data = json_decode((string) $response->getBody(), true);
             return UserDTO::fromArray($data['data']);
         } catch (\Throwable $e) {
