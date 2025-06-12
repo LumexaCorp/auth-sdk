@@ -445,7 +445,7 @@ class AuthClient
     public function createUser(array $data): UserDTO
     {
         try {
-            $response = $this->httpClient->post('/api/users', [
+            $response = $this->httpClient->post('/api/auth/users', [
                 'json' => $data,
             ]);
             $data = json_decode((string) $response->getBody(), true);
