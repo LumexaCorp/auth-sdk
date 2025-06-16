@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Lumexa\AuthSdk;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use Lumexa\AuthSdk\Exceptions\AuthException;
+use Lumexa\AuthSdk\DTOs\RoleDTO;
 use Lumexa\AuthSdk\DTOs\UserDTO;
 use Lumexa\AuthSdk\DTOs\TokenDTO;
-use Lumexa\AuthSdk\DTOs\RoleDTO;
+use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Exception\ClientException;
+use Lumexa\AuthSdk\Exceptions\AuthException;
 use Lumexa\AuthSdk\Exceptions\ValidationException;
 
 class AuthClient
@@ -501,6 +502,18 @@ class AuthClient
             $response = $this->httpClient->delete("/api/users/{$userId}/roles/{$roleId}");
             $data = json_decode((string) $response->getBody(), true);
             return array_map(fn (array $role) => RoleDTO::fromArray($role), $data['data']);
+        } catch (\Throwable $e) {
+            $this->handleApiError($e);
+        }
+    }
+
+    public function getUserByEmail(string $email): ?UserDTO
+    {
+        try {
+            $response = $this->httpClient->get("/api/auth/users/email/{$email}");
+            $data = json_decode((string) $response->getBody(), true);
+
+            return isset($data['data']) ? UserDTO::fromArray($data['data']) : null;
         } catch (\Throwable $e) {
             $this->handleApiError($e);
         }
