@@ -513,6 +513,10 @@ class AuthClient
             $response = $this->httpClient->get("/api/auth/users/email/{$email}");
             $data = json_decode((string) $response->getBody(), true);
 
+            if ($response->getStatusCode() === 404) {
+                return null;
+            }
+
             return isset($data['data']) ? UserDTO::fromArray($data['data']) : null;
         } catch (\Throwable $e) {
             $this->handleApiError($e);
