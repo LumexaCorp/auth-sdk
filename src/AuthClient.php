@@ -518,6 +518,11 @@ class AuthClient
             }
 
             return isset($data['data']) ? UserDTO::fromArray($data['data']) : null;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            if ($e->getResponse()->getStatusCode() === 404) {
+                return null;
+            }
+            $this->handleApiError($e);
         } catch (\Throwable $e) {
             $this->handleApiError($e);
         }
